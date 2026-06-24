@@ -33,6 +33,23 @@ const capitalNameEl = document.getElementById("capital-name");
  *   4. ローディング画面を消す
  */
 async function initApp() {
+  // ローディング画面を消す共通関数。
+  // onGlobeReady・タイムアウト・エラー時のいずれからでも呼ばれる。
+  // 二重呼び出しを防ぐため、一度呼ばれたらフラグを立てる。
+  let loadingHidden = false;
+  const hideLoading = () => {
+    if (!loadingHidden) {
+      loadingHidden = true;
+      loadingEl.style.display = "none";
+    }
+  };
+
+  // ---- タイムアウト保険 ----
+  // onGlobeReady が何らかの理由で呼ばれない場合（テクスチャ読み込み失敗など）でも
+  // 12秒後に強制的にローディング画面を消してアプリを使えるようにする。
+  // ※ onGlobeReady が正常に呼ばれればタイムアウトより先に消える。
+  setTimeout(hideLoading, 12000);
+
   // --- Step 1: 国データを取得する ---
   let countries = [];
   try {
@@ -40,7 +57,9 @@ async function initApp() {
     countries = await response.json();
     console.log(`国データを ${countries.length} カ国分取得しました`);
   } catch (error) {
+    // データ取得に失敗してもローディングを消してエラーメッセージを表示する
     console.error("国データの取得に失敗しました:", error);
+    loadingEl.querySelector(".loading-text").textContent = "データの読み込みに失敗しました。ページをリロードしてください。";
     return;
   }
 
@@ -51,7 +70,6 @@ async function initApp() {
   try {
     const bordersRes = await fetch("/static/data/countries-borders.geojson");
     const bordersGeoJSON = await bordersRes.json();
-    // GeoJSONの features 配列を取り出す（各要素が1カ国分のポリゴン）
     borderFeatures = bordersGeoJSON.features;
     console.log(`国境データを ${borderFeatures.length} カ国分取得しました`);
   } catch (error) {
@@ -60,12 +78,28 @@ async function initApp() {
   }
 
   // --- Step 3: globe.gl の初期化 ---
-  const globe = initGlobe(countries, borderFeatures);
+  // Globe() が未定義の場合（CDNスクリプトの読み込み失敗）はエラー表示する
+  if (typeof Globe === "undefined") {
+    console.error("Globe ライブラリの読み込みに失敗しました");
+    loadingEl.querySelector(".loading-text").textContent = "ライブラリの読み込みに失敗しました。ページをリロードしてください。";
+    return;
+  }
+
+  let globe;
+  try {
+    globe = initGlobe(countries, borderFeatures);
+  } catch (error) {
+    console.error("地球儀の初期化に失敗しました:", error);
+    hideLoading(); // エラー時もローディングを消す
+    return;
+  }
 
   // --- Step 4: ローディング画面を非表示にする ---
+  // onGlobeReady はテクスチャ画像の読み込みが完了したときに呼ばれる。
+  // テクスチャをローカルサーバーから配信することで確実・高速に読み込む。
   globe.onGlobeReady(() => {
-    loadingEl.style.display = "none";
     console.log("地球儀の描画が完了しました");
+    hideLoading();
   });
 }
 
@@ -85,15 +119,17 @@ function initGlobe(countries, borderFeatures) {
   const globe = Globe()
     (document.getElementById("globe-container"))
 
-    // 地球の表面テクスチャ（衛星写真ベース）
-    .globeImageUrl("https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg")
+    // 地球の表面テクスチャ（Flaskサーバーからローカル配信）
+    // CDNから取得すると遅延・タイムアウトの原因になるため、
+    // 画像をリポジトリに同梱してローカルサーバーから配信する
+    .globeImageUrl("/static/img/earth-blue-marble.jpg")
 
     // 大気光（地球の縁をぼんやり光らせる）
     .atmosphereColor("#4fc3f7")
     .atmosphereAltitude(0.25)
 
-    // 宇宙背景
-    .backgroundImageUrl("https://unpkg.com/three-globe/example/img/night-sky.png");
+    // 宇宙背景（同様にローカル配信）
+    .backgroundImageUrl("/static/img/night-sky.png");
 
 
   // ---- 国境線ポリゴンレイヤーの設定 ----
