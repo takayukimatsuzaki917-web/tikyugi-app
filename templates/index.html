@@ -63,6 +63,14 @@
   </div>
 
   <!--
+    Three.js を globe.gl より先に読み込む。
+    globe.gl は内部に Three.js をバンドルしているが、グローバルの THREE は
+    公開されない。国旗スプライト（WebGL描画）を作成するため別途ロードする。
+    ※ globe.gl 2.46.1 は three >= 0.179 を要件とするため 0.184 を使用。
+  -->
+  <script src="https://unpkg.com/three@0.184.0/build/three.min.js"></script>
+
+  <!--
     globe.gl ライブラリを CDN から読み込む。
     Three.js + d3-geo をベースにした3D地球儀ライブラリで、
     マウスドラッグ・タッチ操作による回転が標準でサポートされている。
