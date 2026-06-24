@@ -5,3 +5,8 @@
 
 # Flask: PythonでWebサーバーを構築するための軽量フレームワーク
 Flask==3.1.1
+
+# gunicorn: 本番環境用のWSGIサーバー
+# Render.com などのクラウドサービスでは、Flaskの開発サーバーではなく
+# gunicorn を使って起動することが推奨されている
+gunicorn==23.0.0

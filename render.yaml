@@ -1,0 +1,25 @@
+# render.yaml - Render.com Blueprint 設定ファイル
+#
+# この設定ファイルを使うと、Render.com がリポジトリを見つけたとき
+# 自動的にWebサービスとして認識・デプロイしてくれる。
+#
+# 参考: https://render.com/docs/blueprint-spec
+
+services:
+  - type: web                         # Webサービス（HTTPサーバー）として登録
+    name: tikyugi-app                 # Render.com 上に表示されるサービス名
+    env: python                       # Python ランタイムを使用
+    plan: free                        # 無料プランを使用
+
+    # ビルド時に実行するコマンド（依存パッケージのインストール）
+    buildCommand: pip install -r requirements.txt
+
+    # 起動コマンド（gunicorn で Flask アプリを本番起動）
+    # $PORT は Render.com が自動で割り当てるポート番号
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 2
+
+    # 環境変数の設定
+    envVars:
+      # Python の出力をバッファリングせずにリアルタイムでログに表示する
+      - key: PYTHONUNBUFFERED
+        value: "1"

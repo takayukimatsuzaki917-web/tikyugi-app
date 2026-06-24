@@ -90,19 +90,30 @@ def serve_flag(filename):
 
 
 # このファイルを直接実行したとき（python app.py）だけサーバーを起動する
-# （他のファイルからimportされたときは起動しない）
+# （gunicorn などから import されたときは起動しない）
 if __name__ == "__main__":
-    print("=" * 50)
-    print("こども向けデジタル地球儀アプリを起動します")
-    print("=" * 50)
-    print("PCのブラウザでアクセス: http://localhost:5000")
-    print()
-    print("iPhoneでアクセスする場合:")
-    print("  1. このPCのIPアドレスを確認してください（例: 192.168.1.10）")
-    print("  2. iPhoneのSafariで http://192.168.1.10:5000 にアクセスしてください")
-    print("  ※ PCとiPhoneが同じWi-Fiに接続されている必要があります")
-    print("=" * 50)
+    # PORT 環境変数が設定されている場合はその値を使う。
+    # Render.com はデプロイ時に PORT を自動で設定する。
+    # ローカル開発時は PORT が未設定のため、デフォルト値 5000 を使う。
+    port = int(os.environ.get("PORT", 5000))
 
-    # debug=True にすると、コードを変更したとき自動でサーバーが再起動する
-    # host="0.0.0.0" にすると、同じWi-Fi内のiPhoneからもアクセスできるようになる
-    app.run(debug=True, host="0.0.0.0", port=5000)
+    # FLASK_DEBUG 環境変数で debug モードを切り替える。
+    # ローカル開発時: debug=True（コード変更時に自動再起動）
+    # Render.com 本番環境: debug=False（FLASK_DEBUG を設定しなければ False）
+    debug = os.environ.get("FLASK_DEBUG", "false").lower() == "true"
+
+    if not debug:
+        print("=" * 50)
+        print("こども向けデジタル地球儀アプリを起動します")
+        print("=" * 50)
+        print(f"PCのブラウザでアクセス: http://localhost:{port}")
+        print()
+        print("iPhoneでアクセスする場合:")
+        print("  1. このPCのIPアドレスを確認してください（例: 192.168.1.10）")
+        print(f"  2. iPhoneのSafariで http://192.168.1.10:{port} にアクセスしてください")
+        print("  ※ PCとiPhoneが同じWi-Fiに接続されている必要があります")
+        print("=" * 50)
+
+    # host="0.0.0.0" にすると、同じWi-Fi内のiPhoneや
+    # Render.com からもアクセスできるようになる
+    app.run(debug=debug, host="0.0.0.0", port=port)
