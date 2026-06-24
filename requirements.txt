@@ -1,0 +1,7 @@
+# requirements.txt - このアプリが必要とするPythonパッケージの一覧
+#
+# インストール方法:
+#   pip install -r requirements.txt
+
+# Flask: PythonでWebサーバーを構築するための軽量フレームワーク
+Flask==3.1.1

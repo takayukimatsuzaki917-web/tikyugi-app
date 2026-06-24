@@ -1,0 +1,264 @@
+/* style.css - こども向けデジタル地球儀アプリのスタイル */
+
+/* ========== リセット・基本設定 ========== */
+
+/*
+  * セレクタはすべての要素を指す。
+  box-sizing: border-box にすると、paddingやborderが
+  widthやheightに含まれるようになり、レイアウトが計算しやすくなる。
+*/
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/*
+  html・body を画面いっぱいに広げ、はみ出し（スクロール）を防ぐ。
+  background-color: #0a0a2e は深い夜空のような濃い紺色。
+  宇宙空間のイメージを演出するために使用。
+*/
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;          /* スクロールバーを非表示にする */
+  background-color: #0a0a2e; /* 宇宙のような暗い青色の背景 */
+  /* iPhoneでのバウンススクロール（ゴムひきのような動き）を防ぐ */
+  overscroll-behavior: none;
+}
+
+/* ========== ローディング画面 ========== */
+
+/*
+  地球儀の読み込みが終わるまで表示する全画面オーバーレイ。
+  position: fixed で画面全体に固定し、z-index: 9999 で最前面に表示する。
+*/
+#loading {
+  position: fixed;
+  inset: 0;                  /* top/right/bottom/left すべて 0 に相当 */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: #0a0a2e;
+  z-index: 9999;
+  gap: 20px;
+}
+
+/* 地球絵文字のアイコン部分 */
+.loading-icon {
+  font-size: 80px;
+  /* 上下にゆっくり揺れるアニメーションをかける */
+  animation: bounce 1.2s ease-in-out infinite;
+}
+
+/* 「よみこみちゅう...」テキスト */
+.loading-text {
+  color: #ffffff;
+  font-size: 24px;
+  font-family: "Hiragino Maru Gothic Pro", "BIZ UDPGothic", "Kosugi Maru", sans-serif;
+  letter-spacing: 0.1em;
+}
+
+/* バウンスアニメーションの定義 */
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-15px); }
+}
+
+/* ========== 地球儀コンテナ ========== */
+
+/*
+  globe.gl がこの div の中に canvas（描画領域）を自動生成する。
+  画面いっぱいに表示するため position: fixed + inset: 0 を使用。
+*/
+#globe-container {
+  position: fixed;
+  inset: 0;
+  /* touch-action: none にすると、ブラウザのデフォルトのタッチ操作
+     （スクロールやピンチズームなど）を無効にし、globe.gl が
+     タッチイベントを自分でハンドリングできるようになる */
+  touch-action: none;
+}
+
+/* ========== 国情報カード ========== */
+
+/*
+  マーカーをタップしたときに画面下部からスライドして表示されるカード。
+  position: fixed + bottom: 0 で画面下部に固定表示する。
+*/
+#country-card {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;             /* 地球儀より前面に表示 */
+
+  /* カードの見た目 */
+  background: linear-gradient(135deg, #1a1a5e 0%, #2d2d8e 100%);
+  border-top: 3px solid #ffd700; /* 金色のボーダーでアクセント */
+  border-radius: 24px 24px 0 0;  /* 上の角だけ丸くする */
+  padding: 20px 24px 32px;       /* 下部を多めにとり、iPhoneのホームバーと重ならないようにする */
+
+  /* カード内部のレイアウト */
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 20px;
+
+  /* 下からスライドするアニメーション */
+  transform: translateY(0);
+  transition: transform 0.35s ease, opacity 0.35s ease;
+}
+
+/*
+  .hidden クラスが付いているときは非表示にする。
+  JavaScriptでこのクラスを付け外しすることでカードの表示/非表示を切り替える。
+*/
+#country-card.hidden {
+  transform: translateY(110%); /* カードを画面下に押し出す */
+  opacity: 0;
+  pointer-events: none;        /* 非表示中はタップを受け付けない */
+}
+
+/* ========== 国旗画像 ========== */
+
+#flag-img {
+  width: 120px;
+  height: 80px;
+  object-fit: contain;    /* 画像のアスペクト比を保ちながら枠に収める */
+  border-radius: 8px;
+  /* 白い枠線と影で国旗を目立たせる */
+  border: 3px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  flex-shrink: 0;          /* 国旗が縮まないようにする */
+}
+
+/* ========== 国情報テキストエリア ========== */
+
+#country-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* 「くにのなまえ」「しゅと」の各行 */
+.info-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* ラベル（「くにのなまえ」「しゅと」）の文字スタイル */
+.info-label {
+  color: #ffd700;            /* 金色でラベルを目立たせる */
+  font-size: 14px;
+  font-family: "Hiragino Maru Gothic Pro", "BIZ UDPGothic", "Kosugi Maru", sans-serif;
+  font-weight: bold;
+  letter-spacing: 0.1em;
+}
+
+/*
+  国名・首都名のテキストスタイル。
+  3歳児でも読みやすいよう、大きくてはっきりした文字にする。
+*/
+.info-value {
+  color: #ffffff;
+  font-size: 28px;
+  font-family: "Hiragino Maru Gothic Pro", "BIZ UDPGothic", "Kosugi Maru", sans-serif;
+  font-weight: bold;
+  line-height: 1.2;
+}
+
+/* ========== 閉じるボタン ========== */
+
+/*
+  カードの右上に配置する「✕」ボタン。
+  position: absolute でカードの右上に固定配置する。
+*/
+#close-btn {
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  border-radius: 50%;        /* 丸いボタンにする */
+  width: 40px;
+  height: 40px;
+  color: #ffffff;
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* タップしたときに視覚的なフィードバックを与える */
+  transition: background 0.2s;
+}
+
+#close-btn:active {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+/* ========== マーカーのスタイル ========== */
+
+/*
+  globe.gl の htmlElement マーカーとして使用する国旗アイコンのスタイル。
+  JavaScriptで動的に生成するため、クラス名 .marker-flag で指定する。
+*/
+.marker-flag {
+  /* 3歳児でもタップしやすいよう、国旗を大きめに表示する */
+  width: 64px;
+  height: 44px;
+  border-radius: 6px;
+  border: 3px solid white;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.7);
+  object-fit: contain;
+  cursor: pointer;
+  padding: 2px;
+  background: white;
+  /* iOSでのタップ認識を改善する */
+  -webkit-tap-highlight-color: rgba(255, 215, 0, 0.3);
+  /* ホバー・タップ時のアニメーション */
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.marker-flag:hover,
+.marker-flag:active {
+  transform: scale(1.3);
+  box-shadow: 0 6px 20px rgba(255, 215, 0, 0.9);
+  border-color: #ffd700;
+}
+
+/* ========== レスポンシブ対応（iPhone SE など小さい画面） ========== */
+
+@media (max-width: 375px) {
+  /* 小さい画面では国旗を少し小さくして、テキストスペースを確保する */
+  #flag-img {
+    width: 90px;
+    height: 60px;
+  }
+
+  .info-value {
+    font-size: 22px;
+  }
+}
+
+/* ========== 横向き（landscape）対応 ========== */
+
+@media (orientation: landscape) and (max-height: 500px) {
+  /* 横向き時はカードの高さを抑えてコンパクトに表示する */
+  #country-card {
+    padding: 12px 24px 16px;
+  }
+
+  #flag-img {
+    width: 80px;
+    height: 54px;
+  }
+
+  .info-value {
+    font-size: 20px;
+  }
+}

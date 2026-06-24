@@ -1,0 +1,36 @@
+# .gitignore - Gitの管理対象から除外するファイル・フォルダの設定
+
+# ---- Python ----
+# バイトコードキャッシュ（Pythonが自動生成するファイル）
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+
+# ---- 仮想環境 ----
+# venv / .venv などの仮想環境フォルダ（環境に依存するため除外）
+venv/
+.venv/
+env/
+.env/
+
+# ---- Flaskの設定ファイル ----
+# 開発時のFlask設定（本番環境の設定が含まれる可能性があるため除外）
+instance/
+.flaskenv
+
+# ---- IDE・エディタ ----
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ---- OS固有 ----
+# macOS のメタデータファイル
+.DS_Store
+# Windows のサムネイルキャッシュ
+Thumbs.db
+desktop.ini
+
+# ---- ログファイル ----
+*.log

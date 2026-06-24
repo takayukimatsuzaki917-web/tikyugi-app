@@ -1,0 +1,102 @@
+[
+  {
+    "id": "jp",
+    "name_ja": "にほん",
+    "name_script": "hiragana",
+    "capital_ja": "とうきょう",
+    "capital_script": "hiragana",
+    "lat": 36.2048,
+    "lng": 138.2529,
+    "flag_code": "jp"
+  },
+  {
+    "id": "us",
+    "name_ja": "アメリカ",
+    "name_script": "katakana",
+    "capital_ja": "ワシントンディーシー",
+    "capital_script": "katakana",
+    "lat": 38.9072,
+    "lng": -77.0369,
+    "flag_code": "us"
+  },
+  {
+    "id": "gb",
+    "name_ja": "イギリス",
+    "name_script": "katakana",
+    "capital_ja": "ロンドン",
+    "capital_script": "katakana",
+    "lat": 51.5074,
+    "lng": -0.1278,
+    "flag_code": "gb"
+  },
+  {
+    "id": "de",
+    "name_ja": "ドイツ",
+    "name_script": "katakana",
+    "capital_ja": "ベルリン",
+    "capital_script": "katakana",
+    "lat": 52.5200,
+    "lng": 13.4050,
+    "flag_code": "de"
+  },
+  {
+    "id": "cz",
+    "name_ja": "チェコ",
+    "name_script": "katakana",
+    "capital_ja": "プラハ",
+    "capital_script": "katakana",
+    "lat": 50.0755,
+    "lng": 14.4378,
+    "flag_code": "cz"
+  },
+  {
+    "id": "it",
+    "name_ja": "イタリア",
+    "name_script": "katakana",
+    "capital_ja": "ローマ",
+    "capital_script": "katakana",
+    "lat": 41.9028,
+    "lng": 12.4964,
+    "flag_code": "it"
+  },
+  {
+    "id": "au",
+    "name_ja": "オーストラリア",
+    "name_script": "katakana",
+    "capital_ja": "キャンベラ",
+    "capital_script": "katakana",
+    "lat": -35.2809,
+    "lng": 149.1300,
+    "flag_code": "au"
+  },
+  {
+    "id": "br",
+    "name_ja": "ブラジル",
+    "name_script": "katakana",
+    "capital_ja": "ブラジリア",
+    "capital_script": "katakana",
+    "lat": -15.7939,
+    "lng": -47.8828,
+    "flag_code": "br"
+  },
+  {
+    "id": "eg",
+    "name_ja": "エジプト",
+    "name_script": "katakana",
+    "capital_ja": "カイロ",
+    "capital_script": "katakana",
+    "lat": 30.0444,
+    "lng": 31.2357,
+    "flag_code": "eg"
+  },
+  {
+    "id": "in",
+    "name_ja": "インド",
+    "name_script": "katakana",
+    "capital_ja": "ニューデリー",
+    "capital_script": "katakana",
+    "lat": 28.6139,
+    "lng": 77.2090,
+    "flag_code": "in"
+  }
+]
