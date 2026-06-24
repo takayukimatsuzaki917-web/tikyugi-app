@@ -98,5 +98,15 @@
     "lat": 28.6139,
     "lng": 77.2090,
     "flag_code": "in"
+  },
+  {
+    "id": "za",
+    "name_ja": "みなみアフリカ",
+    "name_script": "katakana",
+    "capital_ja": "プレトリア",
+    "capital_script": "katakana",
+    "lat": -25.7461,
+    "lng": 28.1881,
+    "flag_code": "za"
   }
 ]
