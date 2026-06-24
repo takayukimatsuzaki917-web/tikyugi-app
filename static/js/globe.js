@@ -118,8 +118,7 @@ function initGlobe(countries, borderFeatures) {
       .polygonsData(borderFeatures)
       .polygonCapColor(() => "rgba(0, 0, 0, 0)")
       .polygonSideColor(() => "rgba(0, 0, 0, 0)")
-      .polygonStrokeColor(() => "rgba(255, 255, 255, 0.65)")
-      .polygonResolution(3);
+      .polygonStrokeColor(() => "rgba(255, 255, 255, 0.65)");
   }
 
 
@@ -144,62 +143,75 @@ function initGlobe(countries, borderFeatures) {
   container.addEventListener("touchend",   resumeAutoRotate);
 
 
-  // ---- 国旗マーカー（labelsData＋絵文字国旗 / WebGL スプライト描画） ----
+  // ---- 国旗マーカー（htmlElementsData＋SVG画像オーバーレイ） ----
   //
-  // 【なぜ labelsData を使うか】
-  //   globe.gl の labelsData は、絵文字テキストをキャンバスに描画し、
-  //   globe.gl 自身の内蔵 Three.js でスプライトテクスチャとして WebGL 描画する。
-  //   外部 THREE を一切使わないため、二重インスタンス問題が起きない。
+  // 【なぜ htmlElementsData を使うか】
+  //   過去に試した方式と問題点：
+  //     1. customThreeObjectsData（外部 THREE.Sprite）
+  //        → globe.gl 内蔵 THREE と外部 import THREE の二重インスタンス問題で
+  //          スプライトが描画されない
+  //     2. labelsData（絵文字国旗）
+  //        → Windows には国旗絵文字フォントが無いため Chrome で国旗が表示されない
   //
-  // 【絵文字国旗について】
-  //   "🇯🇵" のような国旗絵文字はユーザーのデバイス（iPhone等）のシステムフォントで
-  //   描画されるため、iPhone では鮮明な国旗として表示される。
-  //   絵文字は Unicode の「地域指示シンボル」を2文字組み合わせて表現される。
-  //   例: "JP" → 🇯🇵（U+1F1EF U+1F1F5）
+  //   htmlElementsData は、各データに対応する HTML 要素を生成し、
+  //   globe.gl が地球儀上の正しい位置に重ねて表示してくれる方式。
+  //   実際の SVG 国旗画像（<img>）をそのまま使えるため、
+  //   OS のフォント事情に左右されず、全プラットフォームで本物の国旗が表示される。
   //
   // 【クリック・タップの検出】
-  //   globe.gl の onLabelClick が内部でレイキャスト（3D当たり判定）を行い、
-  //   タッチ・マウスの両方に対応している。
+  //   生成した HTML 要素に直接 click / touch イベントを付けて検出する。
   globe
-    .labelsData(countries)
-    .labelLat(d => d.lat)
-    .labelLng(d => d.lng)
-    .labelAltitude(0.04)                          // 地球表面から 4% 上に配置
-    .labelText(d => getFlagEmoji(d.flag_code))     // 国コードを絵文字国旗に変換
-    .labelSize(3.5)                               // 表示サイズ（角度換算）
-    .labelDotRadius(0.4)                          // マーカードットのサイズ
-    .labelDotOrientation(() => "bottom")          // ドットをラベルの下に配置
-    .labelColor(() => "rgba(255, 255, 255, 0.9)") // テキスト色（絵文字自体の色は変わらない）
-    .labelResolution(8)                           // キャンバス解像度（高いほど鮮明）
-    .onLabelClick((country) => {
-      // country は labelsData に渡した国データオブジェクト
-      showCountryCard(country);
-    });
+    .htmlElementsData(countries)
+    .htmlLat(d => d.lat)
+    .htmlLng(d => d.lng)
+    .htmlAltitude(0.04)                 // 地球表面から 4% 上に配置
+    .htmlElement(d => createFlagElement(d));
 
 
   return globe;
 }
 
 
-// ========== 国コードを絵文字国旗に変換する関数 ==========
+// ========== 国旗 HTML 要素の作成 ==========
 
 /**
- * 2文字の ISO 国コードを絵文字国旗文字に変換する。
+ * 1つの国に対して、地球儀上に重ねて表示する国旗の HTML 要素を作成する。
  *
- * Unicode の「地域指示シンボル」（U+1F1E6〜U+1F1FF）を2つ並べることで
- * 国旗絵文字を表現する仕組みを利用している。
+ * globe.gl は返された要素を内部で CSS transform により地球儀上の位置へ移動させる。
+ * 要素自体のサイズ・見た目はこの関数で自由に指定できる。
  *
- * 例: "jp" → 🇯🇵、"us" → 🇺🇸、"gb" → 🇬🇧
- *
- * @param {string} code - 国コード（例: "jp", "us"）小文字でも大文字でも可
- * @returns {string} - 絵文字国旗文字列
+ * @param {Object} country - 国データオブジェクト
+ * @returns {HTMLElement} - 地球儀上に表示する国旗の要素
  */
-function getFlagEmoji(code) {
-  // 大文字に変換してから各文字を地域指示シンボルに変換する
-  // A=65 に対して U+1F1E6（🇦）は 127462 なので、差は 127462-65=127397
-  return code.toUpperCase().split("").map(char =>
-    String.fromCodePoint(127397 + char.charCodeAt(0))
-  ).join("");
+function createFlagElement(country) {
+  // 国旗画像（SVG）を表示する img 要素
+  const img = document.createElement("img");
+  img.src = `/static/flags/${country.flag_code}.svg`;
+  img.alt = `${country.name_ja}のこっき`;
+
+  // ---- 見た目のスタイル ----
+  img.style.width        = "44px";          // iPhone でも押しやすいサイズ
+  img.style.height       = "30px";
+  img.style.objectFit    = "cover";
+  img.style.border       = "2px solid #ffffff";
+  img.style.borderRadius = "4px";
+  img.style.boxShadow    = "0 2px 6px rgba(0, 0, 0, 0.5)";
+  img.style.cursor       = "pointer";
+  // globe.gl が transform で位置を制御するため、自身の中心を基準点にする
+  img.style.transform    = "translate(-50%, -50%)";
+  // タップ・クリックを確実に受け取れるようにする
+  img.style.pointerEvents = "auto";
+
+  // ---- タップ・クリックで国情報カードを表示 ----
+  const onSelect = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    showCountryCard(country);
+  };
+  img.addEventListener("click", onSelect);
+  img.addEventListener("touchend", onSelect);
+
+  return img;
 }
 
 
