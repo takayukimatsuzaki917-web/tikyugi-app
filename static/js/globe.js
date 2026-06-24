@@ -2,22 +2,22 @@
  * globe.js - こども向けデジタル地球儀アプリのメインスクリプト
  *
  * 【国旗マーカーの描画方式】
- *   以前は globe.gl の htmlElementsData（CSS2DRenderer）を使っていたが、
- *   iOS Safari では WebGL キャンバスと HTML オーバーレイが正しく合成されず
- *   国旗が表示されない問題があった。
- *   そのため customThreeObjectsData（Three.js Sprite / WebGL直接描画）に変更。
- *   WebGL で描画するため iOS を含む全プラットフォームで確実に表示される。
+ *   globe.gl の labelsData（ラベルレイヤー）に絵文字国旗を使う方式を採用。
  *
- * 【THREE の読み込み方式】
- *   three@0.184.0 以降は UMD ビルド（three.min.js / window.THREE を設定するもの）
- *   が廃止された。そのため ES Module として import する方式を採用。
- *   index.html の importmap で "three" → three.module.min.js を対応付けしてある。
- *   このファイルは <script type="module"> で読み込まれるため import が使える。
+ *   過去に試みた方式と問題点：
+ *     1. htmlElementsData（CSS2DRenderer）
+ *        → iOS Safari で WebGL canvas と HTML overlay の合成に問題があり表示されない
+ *     2. customThreeObjectsData（外部 THREE.Sprite）
+ *        → globe.gl 内蔵 THREE と外部インポート THREE の二重インスタンス問題で
+ *          スプライトが globe.gl のレンダラーに認識されず描画されない
+ *
+ *   labelsData の利点：
+ *     - globe.gl 自身の内蔵 THREE で絵文字をキャンバステクスチャとして描画
+ *     - WebGL スプライトとして描画するため CSS2DRenderer 問題が起きない
+ *     - iOS・Android・PC 全プラットフォームで確実に動作する
+ *     - 絵文字国旗はユーザーのブラウザ（iPhone等）でレンダリングされるため鮮明
  */
 
-// THREE を ES Module として import する
-// index.html の importmap により "three" が three.module.min.js に解決される
-import * as THREE from "three";
 
 // ========== DOM要素の取得 ==========
 
@@ -72,7 +72,6 @@ async function initApp() {
 
   // --- Step 3: Globe ライブラリが利用可能か確認する ---
   // Globe は index.html の <script src="globe.gl"> でグローバルに定義される
-  // THREE は import 文で取得済みのため、ここでのチェックは不要
   if (typeof Globe === "undefined") {
     console.error("Globe が未定義です。globe.gl の読み込みを確認してください。");
     loadingEl.querySelector(".loading-text").textContent =
@@ -145,30 +144,36 @@ function initGlobe(countries, borderFeatures) {
   container.addEventListener("touchend",   resumeAutoRotate);
 
 
-  // ---- 国旗マーカー（Three.js Sprite / WebGL描画） ----
+  // ---- 国旗マーカー（labelsData＋絵文字国旗 / WebGL スプライト描画） ----
   //
-  // 【なぜ customThreeObjectsData を使うか】
-  //   htmlElementsData は CSS2DRenderer でHTMLを重ねる方式。
-  //   iOS Safari では WebGL canvas と HTML overlay の合成に問題があり、
-  //   国旗が表示されないケースがある。
-  //   customThreeObjectsData は WebGL で直接スプライトを描画するため
-  //   iOS を含む全環境で確実に動作する。
+  // 【なぜ labelsData を使うか】
+  //   globe.gl の labelsData は、絵文字テキストをキャンバスに描画し、
+  //   globe.gl 自身の内蔵 Three.js でスプライトテクスチャとして WebGL 描画する。
+  //   外部 THREE を一切使わないため、二重インスタンス問題が起きない。
+  //
+  // 【絵文字国旗について】
+  //   "🇯🇵" のような国旗絵文字はユーザーのデバイス（iPhone等）のシステムフォントで
+  //   描画されるため、iPhone では鮮明な国旗として表示される。
+  //   絵文字は Unicode の「地域指示シンボル」を2文字組み合わせて表現される。
+  //   例: "JP" → 🇯🇵（U+1F1EF U+1F1F5）
   //
   // 【クリック・タップの検出】
-  //   globe.gl の onCustomObjectClick が内部でレイキャスト（3D当たり判定）を行い、
+  //   globe.gl の onLabelClick が内部でレイキャスト（3D当たり判定）を行い、
   //   タッチ・マウスの両方に対応している。
   globe
-    .customThreeObjectsData(countries)
-    .customThreeObjectLat(d => d.lat)
-    .customThreeObjectLng(d => d.lng)
-    .customThreeObjectAltitude(0.04)        // 地球表面から 4% 上に配置
-    .customThreeObject(d => createFlagSprite(d))
-    .onCustomObjectClick((obj) => {
-      // obj は createFlagSprite が返した THREE.Sprite
-      // userData に国データを保存しているので取り出す
-      if (obj && obj.userData && obj.userData.country) {
-        showCountryCard(obj.userData.country);
-      }
+    .labelsData(countries)
+    .labelLat(d => d.lat)
+    .labelLng(d => d.lng)
+    .labelAltitude(0.04)                          // 地球表面から 4% 上に配置
+    .labelText(d => getFlagEmoji(d.flag_code))     // 国コードを絵文字国旗に変換
+    .labelSize(3.5)                               // 表示サイズ（角度換算）
+    .labelDotRadius(0.4)                          // マーカードットのサイズ
+    .labelDotOrientation(() => "bottom")          // ドットをラベルの下に配置
+    .labelColor(() => "rgba(255, 255, 255, 0.9)") // テキスト色（絵文字自体の色は変わらない）
+    .labelResolution(8)                           // キャンバス解像度（高いほど鮮明）
+    .onLabelClick((country) => {
+      // country は labelsData に渡した国データオブジェクト
+      showCountryCard(country);
     });
 
 
@@ -176,89 +181,25 @@ function initGlobe(countries, borderFeatures) {
 }
 
 
-// ========== 国旗スプライトの作成（Three.js Sprite） ==========
+// ========== 国コードを絵文字国旗に変換する関数 ==========
 
 /**
- * 1つの国に対して Three.js Sprite を作成する関数。
+ * 2文字の ISO 国コードを絵文字国旗文字に変換する。
  *
- * 処理の流れ：
- *   1. Canvas を作成して初期状態（白背景）でテクスチャを生成する
- *   2. SVG 画像を非同期で読み込み、Canvas に描画する
- *   3. texture.needsUpdate = true で Three.js に再アップロードを指示する
+ * Unicode の「地域指示シンボル」（U+1F1E6〜U+1F1FF）を2つ並べることで
+ * 国旗絵文字を表現する仕組みを利用している。
  *
- * @param {Object} country - 国データオブジェクト
- * @returns {THREE.Sprite} - 地球儀上に表示する Sprite オブジェクト
+ * 例: "jp" → 🇯🇵、"us" → 🇺🇸、"gb" → 🇬🇧
+ *
+ * @param {string} code - 国コード（例: "jp", "us"）小文字でも大文字でも可
+ * @returns {string} - 絵文字国旗文字列
  */
-function createFlagSprite(country) {
-  // Canvas を作成して国旗の画像を描く（4:3 の比率）
-  const canvas = document.createElement("canvas");
-  canvas.width  = 240;
-  canvas.height = 160;
-  const ctx = canvas.getContext("2d");
-
-  // ---- 読み込み中の仮表示（白背景＋薄いグレー枠） ----
-  ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  ctx.strokeStyle = "rgba(200, 200, 200, 0.8)";
-  ctx.lineWidth = 6;
-  ctx.strokeRect(3, 3, canvas.width - 6, canvas.height - 6);
-
-  // ---- Three.js テクスチャを Canvas から生成する ----
-  // CanvasTexture は Canvas の内容を GPU テクスチャとして使うクラス
-  const texture = new THREE.CanvasTexture(canvas);
-
-  // ---- SVG 国旗を非同期で読み込んで Canvas に描画する ----
-  const img = new Image();
-  img.onload = () => {
-    // Canvas をクリアして国旗を描く
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    // 白背景（国旗の透過部分を白にする）
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    // 国旗の SVG を Canvas に描画する
-    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-    // Three.js に「テクスチャが更新されたので GPU に再アップロードしてほしい」と伝える
-    texture.needsUpdate = true;
-  };
-  img.onerror = () => {
-    // 国旗が読み込めなかった場合、グレーの × 印を表示する
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = "#cccccc";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.strokeStyle = "#999999";
-    ctx.lineWidth = 8;
-    ctx.beginPath();
-    ctx.moveTo(20, 20); ctx.lineTo(canvas.width - 20, canvas.height - 20);
-    ctx.moveTo(canvas.width - 20, 20); ctx.lineTo(20, canvas.height - 20);
-    ctx.stroke();
-    texture.needsUpdate = true;
-  };
-  // 国旗SVGのパス（Flaskサーバーからローカル配信）
-  img.src = `/static/flags/${country.flag_code}.svg`;
-
-  // ---- SpriteMaterial：スプライトの外見を定義するマテリアル ----
-  const material = new THREE.SpriteMaterial({
-    map: texture,
-    // depthTest: true → 地球の裏側にある国旗は地球に隠れて見えなくなる
-    //   （false にすると裏側の国旗が地球を透過して見えてしまう）
-    depthTest: true,
-    // transparent: true → 国旗の半透明部分を正しく描画する
-    transparent: true,
-  });
-
-  // ---- Sprite オブジェクトを作成する ----
-  const sprite = new THREE.Sprite(material);
-
-  // スプライトのサイズを設定する（globe.gl の Three.js 座標系での単位）
-  // グローブ半径は約 100 なので、scale(14, 9) は半径の 14% × 9% 程度の大きさ
-  sprite.scale.set(14, 9, 1);
-
-  // タップ・クリック時に国データを参照するために userData に保存する
-  // globe.gl の onCustomObjectClick がこの Sprite を渡してくるので、
-  // sprite.userData.country から国データを取り出せる
-  sprite.userData = { country };
-
-  return sprite;
+function getFlagEmoji(code) {
+  // 大文字に変換してから各文字を地域指示シンボルに変換する
+  // A=65 に対して U+1F1E6（🇦）は 127462 なので、差は 127462-65=127397
+  return code.toUpperCase().split("").map(char =>
+    String.fromCodePoint(127397 + char.charCodeAt(0))
+  ).join("");
 }
 
 
@@ -293,7 +234,7 @@ closeBtnEl.addEventListener("touchend", (e) => {
 
 // ========== アプリ起動 ==========
 //
-// <script type="module"> はブラウザによって自動的に defer（遅延実行）される。
-// HTML の DOM が構築された後に実行されるため、DOMContentLoaded を待たずに
-// そのまま initApp() を呼び出してよい。
+// このスクリプトは index.html の </body> 直前に配置されているため、
+// HTML の DOM 要素はすべて構築された後に実行される。
+// そのため DOMContentLoaded を待たずに直接 initApp() を呼び出してよい。
 initApp();

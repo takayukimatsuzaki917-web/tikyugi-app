@@ -63,29 +63,19 @@
   </div>
 
   <!--
-    importmap：モジュール名 "three" を ES Module の URL に対応させる。
-    globe.gl 2.46.1 は three >= 0.179 を要件とするため 0.184 を使用。
-    three@0.184.0 以降は UMD ビルド（three.min.js）が廃止されたため、
-    ES Module（three.module.min.js）をモジュールとして import する方式を採用。
-  -->
-  <script type="importmap">
-    { "imports": { "three": "https://unpkg.com/three@0.184.0/build/three.module.min.js" } }
-  </script>
-
-  <!--
-    globe.gl ライブラリを CDN から読み込む（従来通りグローバルスクリプト）。
+    globe.gl ライブラリを CDN から読み込む。
     Three.js + d3-geo をベースにした3D地球儀ライブラリで、
     マウスドラッグ・タッチ操作による回転が標準でサポートされている。
+    このスクリプトにより window.Globe がグローバルに定義される。
   -->
   <script src="https://unpkg.com/globe.gl"></script>
 
   <!--
-    globe.js を ES Module として読み込む。
-    type="module" にすることで、globe.js 内で import * as THREE from 'three' が使える。
-    モジュールスクリプトは自動的に defer（遅延実行）になるため、
-    DOM が構築された後・DOMContentLoaded の前に実行される。
+    メインスクリプト。
+    DOM が構築された後（</body> 直前）に配置することで、
+    ページ要素が確実に使える状態でスクリプトが実行される。
   -->
-  <script type="module" src="/static/js/globe.js"></script>
+  <script src="/static/js/globe.js"></script>
 
 </body>
 </html>
