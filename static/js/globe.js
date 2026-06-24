@@ -7,7 +7,17 @@
  *   国旗が表示されない問題があった。
  *   そのため customThreeObjectsData（Three.js Sprite / WebGL直接描画）に変更。
  *   WebGL で描画するため iOS を含む全プラットフォームで確実に表示される。
+ *
+ * 【THREE の読み込み方式】
+ *   three@0.184.0 以降は UMD ビルド（three.min.js / window.THREE を設定するもの）
+ *   が廃止された。そのため ES Module として import する方式を採用。
+ *   index.html の importmap で "three" → three.module.min.js を対応付けしてある。
+ *   このファイルは <script type="module"> で読み込まれるため import が使える。
  */
+
+// THREE を ES Module として import する
+// index.html の importmap により "three" が three.module.min.js に解決される
+import * as THREE from "three";
 
 // ========== DOM要素の取得 ==========
 
@@ -60,14 +70,9 @@ async function initApp() {
     console.warn("国境データの取得に失敗しました（国境なしで続行します）:", err);
   }
 
-  // --- Step 3: THREE が利用可能か確認する ---
-  // THREE は index.html で three.min.js から読み込んだグローバル変数
-  if (typeof THREE === "undefined") {
-    console.error("THREE が未定義です。three.min.js の読み込みを確認してください。");
-    loadingEl.querySelector(".loading-text").textContent =
-      "ライブラリの読み込みに失敗しました。ページをリロードしてください。";
-    return;
-  }
+  // --- Step 3: Globe ライブラリが利用可能か確認する ---
+  // Globe は index.html の <script src="globe.gl"> でグローバルに定義される
+  // THREE は import 文で取得済みのため、ここでのチェックは不要
   if (typeof Globe === "undefined") {
     console.error("Globe が未定義です。globe.gl の読み込みを確認してください。");
     loadingEl.querySelector(".loading-text").textContent =
@@ -287,5 +292,8 @@ closeBtnEl.addEventListener("touchend", (e) => {
 
 
 // ========== アプリ起動 ==========
-
-document.addEventListener("DOMContentLoaded", initApp);
+//
+// <script type="module"> はブラウザによって自動的に defer（遅延実行）される。
+// HTML の DOM が構築された後に実行されるため、DOMContentLoaded を待たずに
+// そのまま initApp() を呼び出してよい。
+initApp();
